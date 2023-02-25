@@ -1,0 +1,44 @@
+https://github.com/AXERA-TECH/ax-pipeline/blob/0ba37a0f08346dd80215aa46ac16f199c1f167b9/docs/how_to_deploy_custom_model.md (translated to english with DeepL)
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+How to deploy your own other models
+Read the documentation
+
+Read through the AXera Pulsar toolchain guide to learn how to convert a custom onnx model into the Joint model used in AX620.
+Inserting Post-Processing Code
+
+The model inference in ax-pipeline is basically a standard operation, and pre-processing is not something that needs to be configured in the code.
+
+You basically only need to focus on the post-processing part, adding the required variables to the result structure sample_run_joint_results and assigning the results to the result structure.
+
+ax-pipeline defines a post-processing header file sample_run_joint_post_process.h located in examples/sample_run_joint/sample_run_joint_post_process.h
+
+/// @brief model post-processing functions
+/// @param nOutputSize Number of nodes to output
+/// @param pOutputsInfo The information corresponding to the output nodes, including dimension information, node names, etc.
+/// @param pOutputs Outputs the data pointers of the nodes, including physical addresses, virtual addresses, etc.
+/// @param pResults Information about the result of the target detection
+/// @param SAMPLE_ALGO_WIDTH Input width of the algorithm
+/// @param SAMPLE_ALGO_HEIGHT Input height of the algorithm
+/// @param SAMPLE_MAJOR_STREAM_WIDTH The width of the camera image
+/// @param SAMPLE_MAJOR_STREAM_HEIGHT Height of the camera image
+void sample_run_joint_post_process_yolov5(AX_U32 nOutputSize, AX_JOINT_IOMETA_T *pOutputsInfo, AX_JOINT_IO_BUFFER_T *pOutputs, sample_run _joint_results *pResults,
+                                   int SAMPLE_ALGO_WIDTH, int SAMPLE_ALGO_HEIGHT, int SAMPLE_MAJOR_STREAM_WIDTH, int SAMPLE_MAJOR_STREAM_HEIGHT);
+
+Users can define their own post-processing functions here to complete the post-processing of their models. The post-processing function calls are mainly in pipeline_ai.c.
+
+For post-processing code of some common models, please refer to ax-samples
+OSD
+
+ax-pipeline uses opencv for drawing, the basic steps are as follows
+
+    Request a four-channel image as large as the target image to be OSD'd
+    Draw in the requested quad channel, keeping the channel transparent for the area that does not need to be drawn
+    Overlay the requested four-channel image on the target image that needs OSD by IVPS
+
+Therefore, the user can customize the drawing operator to draw arbitrary content to the above four-channel image, and the specific operation of drawing can be found in the following code file.
+
+    examples/sample_vin_ivps_joint_venc_rtsp/pipe/pipeline_osd.c RgnThreadFunc_V2 function
+    examples/utilities/osd_utils.cpp drawObjs function
+
+OSD will lose the content beyond the image range, please pay attention to whether the coordinates and mask are beyond the image range when drawing, as shown in the following figure.
